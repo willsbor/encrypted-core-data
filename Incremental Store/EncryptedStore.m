@@ -2375,6 +2375,17 @@ static void dbsqliteStripCaseDiacritics(sqlite3_context *context, int argc, cons
         BOOL delete = [self handleDeletedObjectsInSaveRequest:request error:error];
         return (BOOL)(insert && update && delete);
     }];
+    
+    /////
+    /// workaround:
+    /// 在兩個 process 間，如果各自使用自己的 cache，會導致 persistent store 真的有變化時，另一邊的 cache 的資料過期
+    /// 但是 cache 在原來的設計流程中是有用途的
+    /// 目前採取儲存到 persistent store 時就先清除 cache，來達到強迫下次流程時，可以拿到正確值
+    /// 但是目前可以想到的是，如果再使用 cache 到儲存到 persistent store 中間。persistent store 又有變化時，這個方法就會失效
+    /// if the sql shared with other extension apps, the cache should be clean when save finished
+    [objectIDCache removeAllObjects];
+    //////
+    
     if (success) {
         nodeCache = localNodeCache;
         return [NSArray array];
